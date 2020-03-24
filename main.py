@@ -18,7 +18,6 @@ LogbookEntry = namedtuple('LogbookEntry', ['route_name', 'grade', 'attempts'])
 
 
 def number_of_unique_routes(logbook_entries):
-    # note that a set {} is a list of *unique* elements
     return(len({entry.route_name for entry in logbook_entries}))
 
 
@@ -32,7 +31,7 @@ def unsuccessful_attempts(logbook_entries):
 def mean_grade(logbook_entries):
     numeric_grades = [GRADE_TO_NUMBER[entry.grade] for entry in logbook_entries]
     # int always rounds down so use int(X+0.5) for nearest integer to X
-    mean_numeric_grade = int(sum(numeric_grades) / len(numeric_grades) + 0.5)
+    mean_numeric_grade = int(mean(numeric_grades) + 0.5)
     return(NUMBER_TO_GRADE[mean_numeric_grade])
 
 
@@ -42,24 +41,42 @@ def hardest_route(logbook_entries):
 
 
 def furthest_from_average(logbook_entries):
-    mean_numeric_grade = mean([GRADE_TO_NUMBER[entry.grade] for entry in logbook_entries])
-# delta is the difference between the numeric grade and the mean numeric grade
-    logbook_entries_with_deltas = [
-        (abs(GRADE_TO_NUMBER[entry.grade] - mean_numeric_grade), entry)
-        for entry in logbook_entries
-    ]
-    maxdelta = max(logbook_entries_with_deltas)[0]
-# Note that there may be more than one route with grade furthest from the mean.
-# Also, if the mean turns out to be an integer (only likely for short logbooks)
-# there may be some routes the same distance above the mean as below the mean.
-# For example, consider the three entry logbook with grades 6c, 7a, 7b.
-# Both the routes with grades 6c and 7b would be furthest from the mean.
-# Therefore, we want to return a list of all the routes with grade furthest
-# from the mean.
+    """
+    Note that there may be more than one route with grade furthest from the mean.
+    Also, if the mean turns out to be an integer (only likely for short logbooks)
+    there may be some routes the same distance above the mean as below the mean.
+    For example, consider the three entry logbook with grades 6c, 7a, 7b.
+    Both the routes with grades 6c and 7b would be furthest from the mean.
+    Therefore, we want to return a list of all the routes with grade furthest
+    from the mean.
+
+    The routes with grade furthest from the mean will be either all the routes
+    with the maximum grade in the logbook, all the routes with the minimum grade
+    in the logbook, or all the routes with either the maximum or the minimum
+    grade in the logbook, so we distinguish between the three cases:
+    """
+    numeric_grades = [GRADE_TO_NUMBER[entry.grade] for entry in logbook_entries]
+    max_grade = max(numeric_grades)
+    min_grade = min(numeric_grades)
+    average_grade = mean(numeric_grades)
+
+    delta_plus = max_grade - average_grade
+    delta_minus = average_grade - min_grade
+
+    if delta_plus > delta_minus:
+        furthest_grade = [max_grade]
+
+    elif delta_plus == delta_minus:
+        furthest_grade = [max_grade, min_grade]
+
+    else:
+        furthest_grade = [min_grade]
+
     return([
-        (entry[1].route_name, entry[1].grade)
-        for entry in logbook_entries_with_deltas if entry[0] == maxdelta
-    ])
+        (entry.route_name, entry.grade)
+        for entry in logbook_entries
+        if GRADE_TO_NUMBER[entry.grade] in furthest_grade
+        ])
 
 
 def analyse_logbook(logbook_entries):
@@ -68,6 +85,8 @@ def analyse_logbook(logbook_entries):
            mean_grade(logbook_entries),
            hardest_route(logbook_entries),
            furthest_from_average(logbook_entries)])
+
+
 def main():
     logbook_entries = []
 
@@ -81,7 +100,11 @@ def main():
     print(unsuccessful_attempts(logbook_entries))
     print(mean_grade(logbook_entries))
     print(hardest_route(logbook_entries))
-    print(furthest_from_average(logbook_entries))
+    print(', '.join(
+        ' '.join(route)
+        for route in furthest_from_average(logbook_entries)
+    ))
+
 
 if __name__ == '__main__':
     main()
